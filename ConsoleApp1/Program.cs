@@ -31,7 +31,6 @@ namespace SocietySim
             var rnd = new Random();
             var people = CreateInitialPopulation(200, rnd);
 
-            
 
             int males = people.FindAll(p => p.Gender == Gender.Male).Count;
             int females = people.Count - males;
@@ -41,6 +40,7 @@ namespace SocietySim
 
             int deaths = 0;
             int accidents = 0;
+            int marriages = 0;
 
             Console.Write($"Başlangıç Yılı: {startYear}\n");
 
@@ -54,8 +54,8 @@ namespace SocietySim
                 ConsoleKeyInfo keyInfo = Console.ReadKey(true);
                 if (keyInfo.Key == ConsoleKey.Enter)
                 {
-                    (deaths, accidents) = AdvanceOneYear(people, rnd);
-                    PrintYearSummary(people, currentYear, deaths, accidents);
+                    (deaths, accidents, marriages) = AdvanceOneYear(people, rnd);
+                    PrintYearSummary(people, currentYear, deaths, accidents, marriages);
                     i++;
                 }
                 else if (keyInfo.Key == ConsoleKey.Escape)
@@ -66,10 +66,11 @@ namespace SocietySim
             }
         }
 
-        static (int deathsThisYear, int accidentsThisYear) AdvanceOneYear(List<Person> people, Random rnd)
+        static (int deathsThisYear, int accidentsThisYear, int marriagesThisYear) AdvanceOneYear(List<Person> people, Random rnd)
         {
             int deathThisYear = 0;
             int accidentsThisYear = 0;
+            int marriagesThisYear = 0;
 
             //Yaşlandırma
             foreach (var p in people)
@@ -108,17 +109,20 @@ namespace SocietySim
                     }
                 }
             }
-            return (deathThisYear, accidentsThisYear);
+
+            marriagesThisYear = TryMatchMarriages(people, rnd);
+
+            return (deathThisYear, accidentsThisYear, marriagesThisYear);
         }
 
-        static void PrintYearSummary(List<Person> people,int year, int deathsThisYear, int accidentThisYear)
+        static void PrintYearSummary(List<Person> people,int year, int deathsThisYear, int accidentThisYear, int marriagesThisYear)
         {
             int alive = people.FindAll(p => p.IsAlive).Count;
             int married = people.FindAll ( p => p.IsAlive && p.MaritalStatus == MaritalStatus.Married).Count;
             int widowed = people.FindAll(p => p.IsAlive && p.MaritalStatus == MaritalStatus.Widowed).Count;
             int single = alive - married - widowed;
 
-            Console.WriteLine($"Yıl {year}: Nüfus={alive},Evli= {married}, Dul= {widowed}, Bekar= {alive-married - widowed}, Ölüm= {deathsThisYear}, Kaza={accidentThisYear}");
+            Console.WriteLine($"Yıl {year}: Nüfus={alive},Evli= {married}, Dul= {widowed}, Bekar= {alive-married - widowed}, Ölüm= {deathsThisYear}, Kaza={accidentThisYear}, Evlilik={marriagesThisYear}");
         }
 
         static void KillPerson(Person p, List<Person> all)
@@ -194,10 +198,40 @@ namespace SocietySim
             if (age <= 60) return 0.03; // %3
             return 0.00;
         }
-
-        static void MarryPeople(List<Person> people, Random rnd)
+        static int TryMatchMarriages(List<Person> people, Random rnd)
         {
+            var candidates = people.FindAll(p => p.IsAlive 
+            && p.MaritalStatus == MaritalStatus.Single && p.Age >= 18 && p.Age <= 60);
 
+            var males = candidates.FindAll(p => p.Gender == Gender.Male).OrderBy(_ => rnd.Next()).ToList();
+            var females = candidates.FindAll(p => p.Gender == Gender.Female).OrderBy(_ => rnd.Next()).ToList();
+
+
+            var usedFemaleIds = new HashSet<int>();
+
+            int marriages = 0;
+
+            foreach (var m in males)
+            {
+                double prob = MarriageProbabilityAge(m.Age);
+                if (rnd.NextDouble() >= prob) continue;
+
+
+                var match = females.FirstOrDefault(f => !usedFemaleIds.Contains(f.Id) && Math.Abs(f.Age - m.Age) <= 10);
+
+                if ( match == null) continue;
+
+                m.MaritalStatus = MaritalStatus.Married;
+                m.SpouseId = match.Id;
+
+                match.MaritalStatus = MaritalStatus.Married;
+                match.SpouseId = m.Id;
+
+                usedFemaleIds.Add(match.Id);
+                marriages++;
+            }
+
+            return marriages;
         }
     }
 }
