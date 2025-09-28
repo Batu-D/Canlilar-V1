@@ -16,6 +16,8 @@ namespace SocietySim
         public MaritalStatus MaritalStatus { get; set; }
         public bool IsAlive { get; set; } = true;
         public int? SpouseId { get; set; } = null;
+        public int? MotherId { get; set; } = null;
+        public int? FatherId { get; set; } = null;
 
 
         public override string ToString() =>
@@ -26,10 +28,11 @@ namespace SocietySim
     {
         static readonly string[] MaleNames = { "Ahmet", "Mehmet", "Can", "Emre", "Burak", "Mert", "Kerem", "Ali", "Bora", "Onur" };
         static readonly string[] FemaleNames = { "Ayşe", "Elif", "Zeynep", "Naz", "Ece", "Melis", "Deniz", "Derya", "Sude", "İpek" };
+        static int _nextId = 1;
         static void Main()
         {
             var rnd = new Random();
-            var people = CreateInitialPopulation(200, rnd);
+            var people = CreateInitialPopulation(200, rnd, _nextId);
 
 
             int males = people.FindAll(p => p.Gender == Gender.Male).Count;
@@ -110,29 +113,30 @@ namespace SocietySim
                 }
             }
 
+            //Evlilik Olayları
             marriagesThisYear = TryMatchMarriages(people, rnd);
 
             return (deathThisYear, accidentsThisYear, marriagesThisYear);
         }
 
-        static void PrintYearSummary(List<Person> people,int year, int deathsThisYear, int accidentThisYear, int marriagesThisYear)
+        static void PrintYearSummary(List<Person> people, int year, int deathsThisYear, int accidentThisYear, int marriagesThisYear)
         {
             int alive = people.FindAll(p => p.IsAlive).Count;
-            int married = people.FindAll ( p => p.IsAlive && p.MaritalStatus == MaritalStatus.Married).Count;
+            int married = people.FindAll(p => p.IsAlive && p.MaritalStatus == MaritalStatus.Married).Count;
             int widowed = people.FindAll(p => p.IsAlive && p.MaritalStatus == MaritalStatus.Widowed).Count;
             int single = alive - married - widowed;
 
-            Console.WriteLine($"Yıl {year}: Nüfus={alive},Evli= {married}, Dul= {widowed}, Bekar= {alive-married - widowed}, Ölüm= {deathsThisYear}, Kaza={accidentThisYear}, Evlilik={marriagesThisYear}");
+            Console.WriteLine($"Yıl {year}: Nüfus={alive},Evli= {married}, Dul= {widowed}, Bekar= {alive - married - widowed}, Ölüm= {deathsThisYear}, Kaza={accidentThisYear}, Evlilik={marriagesThisYear}");
         }
 
         static void KillPerson(Person p, List<Person> all)
         {
             if (!p.IsAlive) return;
             p.IsAlive = false;
-            if(p.SpouseId is int spouseId)
+            if (p.SpouseId is int spouseId)
             {
                 var spouse = all.Find(x => x.Id == spouseId);
-                if(spouse != null && spouse.IsAlive)
+                if (spouse != null && spouse.IsAlive)
                 {
                     spouse.MaritalStatus = MaritalStatus.Widowed;
                     spouse.SpouseId = null;
@@ -150,18 +154,16 @@ namespace SocietySim
             Console.WriteLine($"Nüfus={alive},Evli= {married}, Dul= {widowed}, Bekar= {alive - married - widowed}");
         }
 
-        static List<Person> CreateInitialPopulation(int n, Random rnd)
+        static List<Person> CreateInitialPopulation(int n, Random rnd, int _nextId)
         {
             var people = new List<Person>(n);
             int males = n / 2;
             int females = n - males;
-
-            int id = 1;
-            for(int i = 0; i < males; i++)
+            for (int i = 0; i < males; i++)
             {
                 people.Add(new Person
                 {
-                    Id = id++,
+                    Id = _nextId++,
                     Name = MaleNames[rnd.Next(MaleNames.Length)],
                     Age = rnd.Next(18, 60),
                     Gender = Gender.Male
@@ -171,7 +173,7 @@ namespace SocietySim
             {
                 people.Add(new Person
                 {
-                    Id = id++,
+                    Id = _nextId++,
                     Name = FemaleNames[rnd.Next(FemaleNames.Length)],
                     Age = rnd.Next(18, 60),
                     Gender = Gender.Female
@@ -200,7 +202,7 @@ namespace SocietySim
         }
         static int TryMatchMarriages(List<Person> people, Random rnd)
         {
-            var candidates = people.FindAll(p => p.IsAlive 
+            var candidates = people.FindAll(p => p.IsAlive
             && p.MaritalStatus == MaritalStatus.Single && p.Age >= 18 && p.Age <= 60);
 
             var males = candidates.FindAll(p => p.Gender == Gender.Male).OrderBy(_ => rnd.Next()).ToList();
@@ -219,7 +221,7 @@ namespace SocietySim
 
                 var match = females.FirstOrDefault(f => !usedFemaleIds.Contains(f.Id) && Math.Abs(f.Age - m.Age) <= 10);
 
-                if ( match == null) continue;
+                if (match == null) continue;
 
                 m.MaritalStatus = MaritalStatus.Married;
                 m.SpouseId = match.Id;
@@ -232,6 +234,57 @@ namespace SocietySim
             }
 
             return marriages;
+        }
+
+        static Person CreateNewborn(Random rnd, int motherId, int fatherId)
+        {
+            var gender = (rnd.NextDouble() < 0.5) ? Gender.Male : Gender.Female;
+
+            string name = (gender == Gender.Male)
+                ? MaleNames[rnd.Next(MaleNames.Length)]
+                : FemaleNames[rnd.Next(FemaleNames.Length)];
+
+            return new Person
+            {
+                Id = _nextId++,
+                Name = name,
+                Age = 0,
+                Gender = gender,
+                MotherId = motherId,
+                FatherId = fatherId,
+                MaritalStatus = MaritalStatus.Single,
+                IsAlive = true,
+                SpouseId = null
+            };
+        }
+
+        static int TryBirths(List<Person> people, Random rnd)
+        {
+            const double birthProb = 0.12;
+
+            var births = new List<Person>();
+
+            var mothers = people.FindAll(p =>
+            p.IsAlive &&
+            p.MaritalStatus == MaritalStatus.Married &&
+            p.Gender == Gender.Female &&
+            p.Age >= 20 && p.Age <= 45);
+
+
+            var usedCouple = new HashSet<(int motherId, int fatherId)>();
+
+            foreach (var mother in mothers)
+            {
+                if (mother.SpouseId is not int fatherId) continue;
+
+                var father = people.Find(x => x.Id == fatherId);
+                if (father == null || !father.IsAlive) continue;
+
+                if (father.Age < 20 || father.Age > 60) continue;
+
+                var coupleKey = (mother.Id, father.Id);
+                if (usedCouple.Contains(coupleKey)) continue;
+            }
         }
     }
 }
