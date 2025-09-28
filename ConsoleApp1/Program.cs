@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SocietySim
 {
     enum Gender { Male, Female }
     enum MaritalStatus { Single, Married, Widowed }
-
 
     class Person
     {
@@ -19,7 +19,6 @@ namespace SocietySim
         public int? MotherId { get; set; } = null;
         public int? FatherId { get; set; } = null;
 
-
         public override string ToString() =>
             $"#{Id} {Name} ({Gender}, {Age}) {MaritalStatus} {(IsAlive ? "" : "[DEAD]")}";
     }
@@ -29,27 +28,17 @@ namespace SocietySim
         static readonly string[] MaleNames = { "Ahmet", "Mehmet", "Can", "Emre", "Burak", "Mert", "Kerem", "Ali", "Bora", "Onur" };
         static readonly string[] FemaleNames = { "Ayşe", "Elif", "Zeynep", "Naz", "Ece", "Melis", "Deniz", "Derya", "Sude", "İpek" };
         static int _nextId = 1;
+
         static void Main()
         {
             var rnd = new Random();
             var people = CreateInitialPopulation(200, rnd);
 
-
-            int males = people.FindAll(p => p.Gender == Gender.Male).Count;
-            int females = people.Count - males;
-
             int startYear = 2025;
             int i = 1;
 
-            int deaths = 0;
-            int accidents = 0;
-            int marriages = 0;
-            int births = 0;
-
             Console.Write($"Başlangıç Yılı: {startYear}\n");
-
             PrintSummary(people);
-
             Console.WriteLine("Similasyonu başlatmak için ENTER tuşuna basınız.");
 
             while (true)
@@ -58,8 +47,8 @@ namespace SocietySim
                 ConsoleKeyInfo keyInfo = Console.ReadKey(true);
                 if (keyInfo.Key == ConsoleKey.Enter)
                 {
-                    (deaths, accidents, marriages, births) = AdvanceOneYear(people, rnd);
-                    PrintYearSummary(people, currentYear, deaths, accidents, marriages, births);
+                    var (deaths, accidents, marriages, births, maleDeaths, femaleDeaths, birthDetails) = AdvanceOneYear(people, rnd);
+                    PrintYearSummary(people, currentYear, deaths, accidents, marriages, births, maleDeaths, femaleDeaths, birthDetails);
                     i++;
                 }
                 else if (keyInfo.Key == ConsoleKey.Escape)
@@ -70,40 +59,50 @@ namespace SocietySim
             }
         }
 
-        static (int deathsThisYear, int accidentsThisYear, int marriagesThisYear, int birthsThisYear) AdvanceOneYear(List<Person> people, Random rnd)
+        static (int deathsThisYear, int accidentsThisYear, int marriagesThisYear, int birthsThisYear, int maleDeathsThisYear, int femaleDeathsThisYear, string birthDetails) AdvanceOneYear(List<Person> people, Random rnd)
         {
-            int deathThisYear = 0;
+            int deathsThisYear = 0;
             int accidentsThisYear = 0;
             int marriagesThisYear = 0;
             int birthsThisYear = 0;
+            int maleDeathsThisYear = 0;
+            int femaleDeathsThisYear = 0;
+            string birthDetails = "";
 
-            //Yaşlandırma
+            // Yaşlandırma
             foreach (var p in people)
             {
                 if (!p.IsAlive) continue;
                 p.Age += 1;
             }
 
-            //Evlilik Olayları
+            // Evlilik Olayları
             marriagesThisYear = TryMatchMarriages(people, rnd);
 
-            //Ölüm Olayları
-            foreach (var p in people)
+            // Ölüm Olayları - FIX: Create a copy to avoid modification during iteration
+            var alivePeople = people.Where(p => p.IsAlive).ToList();
+
+            foreach (var p in alivePeople)
             {
-                if (!p.IsAlive) continue;
                 double deathProb = DeathProbabilityByAge(p.Age);
                 if (rnd.NextDouble() < deathProb)
                 {
                     KillPerson(p, people);
-                    deathThisYear++;
+                    deathsThisYear++;
+
+                    // FIX: Count deaths by gender correctly
+                    if (p.Gender == Gender.Male)
+                        maleDeathsThisYear++;
+                    else
+                        femaleDeathsThisYear++;
                 }
             }
 
-            //Kaza olayları
-            foreach (var p in people)
-            {
-                if (!p.IsAlive) continue;
+            // Kaza olayları - FIX: Use updated alive list and avoid double death counting
+            alivePeople = people.Where(p => p.IsAlive).ToList();
 
+            foreach (var p in alivePeople)
+            {
                 double accidentProb = 0.001;
                 if (rnd.NextDouble() < accidentProb)
                 {
@@ -111,38 +110,59 @@ namespace SocietySim
                     if (rnd.NextDouble() < 0.30)
                     {
                         KillPerson(p, people);
-                        deathThisYear++;
+                        deathsThisYear++;
+
+                        // Count accident deaths by gender
+                        if (p.Gender == Gender.Male)
+                            maleDeathsThisYear++;
+                        else
+                            femaleDeathsThisYear++;
                     }
                 }
             }
-           
-            //Doğum Olayları
-            birthsThisYear = TryBirths(people, rnd);
 
-            // AdvanceOneYear'ın sonunda, return'den hemen önce:
-            int marriedFem20_45 = people.FindAll(p => p.IsAlive && p.MaritalStatus == MaritalStatus.Married && p.Gender == Gender.Female && p.Age >= 20 && p.Age <= 45).Count;
-            int marriedTotal = people.FindAll(p => p.IsAlive && p.MaritalStatus == MaritalStatus.Married).Count;
-            int fem20_45 = people.FindAll(p => p.IsAlive && p.Gender == Gender.Female && p.Age >= 20 && p.Age <= 45).Count;
-            Console.WriteLine($"[DEBUG] Evli 20-45 kadın: {marriedFem20_45} | Toplam evli: {marriedTotal} | 20-45 kadın: {fem20_45}");
+            // Doğum Olayları
+            var (births, details) = TryBirths(people, rnd);
+            birthsThisYear = births;
+            birthDetails = details;
 
-
-            return (deathThisYear, accidentsThisYear, marriagesThisYear, birthsThisYear);
+            return (deathsThisYear, accidentsThisYear, marriagesThisYear, birthsThisYear, maleDeathsThisYear, femaleDeathsThisYear, birthDetails);
         }
 
-        static void PrintYearSummary(List<Person> people, int year, int deathsThisYear, int accidentThisYear, int marriagesThisYear, int birthsThisYear)
+        static void PrintYearSummary(List<Person> people, int year, int deathsThisYear, int accidentThisYear, int marriagesThisYear, int birthsThisYear, int maleDeaths, int femaleDeaths, string birthDetails)
         {
-            int alive = people.FindAll(p => p.IsAlive).Count;
-            int married = people.FindAll(p => p.IsAlive && p.MaritalStatus == MaritalStatus.Married).Count;
-            int widowed = people.FindAll(p => p.IsAlive && p.MaritalStatus == MaritalStatus.Widowed).Count;
+            // FIX: Count only alive people for gender statistics
+            int aliveMales = people.Count(p => p.IsAlive && p.Gender == Gender.Male);
+            int aliveFemales = people.Count(p => p.IsAlive && p.Gender == Gender.Female);
+            int alive = aliveMales + aliveFemales;
+
+            int married = people.Count(p => p.IsAlive && p.MaritalStatus == MaritalStatus.Married);
+            int widowed = people.Count(p => p.IsAlive && p.MaritalStatus == MaritalStatus.Widowed);
             int single = alive - married - widowed;
 
-            Console.WriteLine($"Yıl {year}: Nüfus={alive}, Evli={married}, Dul={widowed}, Bekar={single}, Ölüm={deathsThisYear}, Kaza={accidentThisYear}, Evlilik={marriagesThisYear}, Doğum={birthsThisYear}");
+            Console.WriteLine($@"
+Yıl: {year}
+------------------------------
+Nüfus     : {alive}
+Erkek     : {aliveMales}
+Kadın     : {aliveFemales}
+Evli      : {married}
+Dul       : {widowed}
+Bekar     : {single}
 
+Ölüm      : {deathsThisYear} (E:{maleDeaths}, K:{femaleDeaths})
+Kaza      : {accidentThisYear}
+Evlilik   : {marriagesThisYear}
+Doğum     : {birthsThisYear}{birthDetails}
+");
         }
 
         static void KillPerson(Person p, List<Person> all)
         {
-            if (p.IsAlive) p.IsAlive = false;
+            if (!p.IsAlive) return; // Already dead
+
+            p.IsAlive = false;
+
             if (p.SpouseId is int spouseId)
             {
                 var spouse = all.Find(x => x.Id == spouseId);
@@ -151,22 +171,26 @@ namespace SocietySim
                     spouse.MaritalStatus = MaritalStatus.Widowed;
                     spouse.SpouseId = null;
                 }
+                p.SpouseId = null; // Clear the deceased person's spouse reference too
             }
         }
+
         static void PrintSummary(List<Person> people)
         {
-            int alive = people.FindAll(p => p.IsAlive).Count;
-            int married = people.FindAll(p => p.IsAlive && p.MaritalStatus == MaritalStatus.Married).Count;
-            int widowed = people.FindAll(p => p.IsAlive && p.MaritalStatus == MaritalStatus.Widowed).Count;
+            int alive = people.Count(p => p.IsAlive);
+            int married = people.Count(p => p.IsAlive && p.MaritalStatus == MaritalStatus.Married);
+            int widowed = people.Count(p => p.IsAlive && p.MaritalStatus == MaritalStatus.Widowed);
             int single = alive - married - widowed;
 
-            Console.WriteLine($"Nüfus={alive},Evli= {married}, Dul= {widowed}, Bekar= {alive - married - widowed}");
+            Console.WriteLine($"Nüfus={alive}, Evli={married}, Dul={widowed}, Bekar={single}");
         }
+
         static List<Person> CreateInitialPopulation(int n, Random rnd)
         {
             var people = new List<Person>(n);
             int males = n / 2;
             int females = n - males;
+
             for (int i = 0; i < males; i++)
             {
                 people.Add(new Person
@@ -177,6 +201,7 @@ namespace SocietySim
                     Gender = Gender.Male
                 });
             }
+
             for (int i = 0; i < females; i++)
             {
                 people.Add(new Person
@@ -190,6 +215,7 @@ namespace SocietySim
 
             return people;
         }
+
         static double DeathProbabilityByAge(int age)
         {
             if (age < 40) return 0.001;
@@ -198,6 +224,7 @@ namespace SocietySim
             if (age < 85) return 0.06;
             return 0.12;
         }
+
         static double MarriageProbabilityAge(int age)
         {
             if (age < 18) return 0.00;
@@ -206,17 +233,15 @@ namespace SocietySim
             if (age <= 60) return 0.06; // %6
             return 0.00;
         }
+
         static int TryMatchMarriages(List<Person> people, Random rnd)
         {
-            var candidates = people.FindAll(p => p.IsAlive
-            && p.MaritalStatus != MaritalStatus.Married && p.Age >= 18 && p.Age <= 65);
+            var candidates = people.Where(p => p.IsAlive && p.MaritalStatus != MaritalStatus.Married && p.Age >= 18 && p.Age <= 65).ToList();
 
-            var males = candidates.FindAll(p => p.Gender == Gender.Male).OrderBy(_ => rnd.Next()).ToList();
-            var females = candidates.FindAll(p => p.Gender == Gender.Female).OrderBy(_ => rnd.Next()).ToList();
-
+            var males = candidates.Where(p => p.Gender == Gender.Male).OrderBy(_ => rnd.Next()).ToList();
+            var females = candidates.Where(p => p.Gender == Gender.Female).OrderBy(_ => rnd.Next()).ToList();
 
             var usedFemaleIds = new HashSet<int>();
-
             int marriages = 0;
 
             foreach (var m in males)
@@ -224,11 +249,8 @@ namespace SocietySim
                 double prob = MarriageProbabilityAge(m.Age);
                 if (rnd.NextDouble() >= prob) continue;
 
-
                 var match = females.FirstOrDefault(f => !usedFemaleIds.Contains(f.Id) && Math.Abs(f.Age - m.Age) <= 25);
-
                 if (match == null) continue;
-
 
                 double femaleProb = MarriageProbabilityAge(match.Age);
                 if (rnd.NextDouble() >= femaleProb) continue;
@@ -242,11 +264,10 @@ namespace SocietySim
                 usedFemaleIds.Add(match.Id);
                 marriages++;
             }
-            // TryMatchMarriages dönüşünden önce:
-            Console.WriteLine($"[DEBUG] Bu yıl evlilik sayısı: {marriages}");
 
             return marriages;
         }
+
         static Person CreateNewborn(Random rnd, int motherId, int fatherId)
         {
             var gender = (rnd.NextDouble() < 0.5) ? Gender.Male : Gender.Female;
@@ -268,18 +289,22 @@ namespace SocietySim
                 SpouseId = null
             };
         }
-        static int TryBirths(List<Person> people, Random rnd)
+
+        static (int totalBirths, string birthDetails) TryBirths(List<Person> people, Random rnd)
         {
-            const double birthProb = 0.12;
+            const double birthProb = 0.25; // Base probability for having children
+            const int maxChildrenPerYear = 3; // Maximum children per couple per year
 
             var births = new List<Person>();
+            int singleBirths = 0;
+            int twinBirths = 0;
+            int tripletBirths = 0;
 
-            var mothers = people.FindAll(p =>
-            p.IsAlive &&
-            p.MaritalStatus == MaritalStatus.Married &&
-            p.Gender == Gender.Female &&
-            p.Age >= 20 && p.Age <= 45);
-
+            var mothers = people.Where(p =>
+                p.IsAlive &&
+                p.MaritalStatus == MaritalStatus.Married &&
+                p.Gender == Gender.Female &&
+                p.Age >= 20 && p.Age <= 45).ToList();
 
             var usedCouple = new HashSet<(int motherId, int fatherId)>();
 
@@ -287,7 +312,7 @@ namespace SocietySim
             {
                 if (mother.SpouseId is not int fatherId) continue;
 
-                var father = people.Find(x => x.Id == fatherId);
+                var father = people.FirstOrDefault(x => x.Id == fatherId);
                 if (father == null || !father.IsAlive) continue;
 
                 if (father.Age < 20 || father.Age > 60) continue;
@@ -295,20 +320,70 @@ namespace SocietySim
                 var coupleKey = (mother.Id, father.Id);
                 if (usedCouple.Contains(coupleKey)) continue;
 
+                // Check if this couple will have children this year
                 if (rnd.NextDouble() < birthProb)
                 {
-                    var baby = CreateNewborn(rnd, mother.Id, father.Id);
-                    births.Add(baby);
+                    // Determine number of children (1-3, with decreasing probability)
+                    int numChildren = 1; // At least 1 child
+
+                    // 20% chance for twins (2 children)
+                    if (rnd.NextDouble() < 0.20)
+                    {
+                        numChildren = 2;
+
+                        // 5% chance for triplets (3 children) - only if already having twins
+                        if (rnd.NextDouble() < 0.05)
+                        {
+                            numChildren = 3;
+                        }
+                    }
+
+                    // Count the birth type
+                    switch (numChildren)
+                    {
+                        case 1:
+                            singleBirths++;
+                            break;
+                        case 2:
+                            twinBirths++;
+                            break;
+                        case 3:
+                            tripletBirths++;
+                            break;
+                    }
+
+                    // Create the children
+                    for (int i = 0; i < numChildren; i++)
+                    {
+                        var baby = CreateNewborn(rnd, mother.Id, father.Id);
+                        births.Add(baby);
+                    }
+
                     usedCouple.Add(coupleKey);
                 }
             }
+
             if (births.Count > 0)
             {
                 people.AddRange(births);
             }
-            Console.WriteLine($"[DEBUG] Uygun anne sayısı: {mothers.Count}, Evli kadın 20-45");
-            return births.Count;
-        }
 
+            // Create birth details string
+            string details = "";
+            if (twinBirths > 0 || tripletBirths > 0)
+            {
+                details = " (";
+                if (twinBirths > 0)
+                    details += $"İkiz: {twinBirths}";
+                if (tripletBirths > 0)
+                {
+                    if (twinBirths > 0) details += ", ";
+                    details += $"Üçüz: {tripletBirths}";
+                }
+                details += ")";
+            }
+
+            return (births.Count, details);
+        }
     }
 }
