@@ -7,8 +7,7 @@ using System.IO;
 
 namespace SocietySim
 {
-    enum Gender { Male, Female }
-    enum MaritalStatus { Single, Married, Widowed }
+    
 
     class ProbabilityBand
     {
@@ -20,9 +19,9 @@ namespace SocietySim
     class SimulationConfig
     {
         public List<string> MaleNames { get; set; } = new()
-        { "Ahmet", "Mehmet", "Can", "Emre", "Burak", "Mert", "Kerem", "Ali", "Bora", "Onur" };
+        { "Ahmet", "Mehmet", "Can", "Emre", "Burak", "Mert", "Kerem", "Ali", "Bora", "Onur","Duhan" };
         public List<string> FemaleNames { get; set; } = new()
-        { "Ayşe", "Elif", "Zeynep", "Naz", "Ece", "Melis", "Deniz", "Derya", "Sude", "İpek" };
+        { "Ayşe", "Elif", "Zeynep", "Naz", "Ece", "Melis", "Deniz", "Derya", "Sude", "İpek", "Ela" };
         public List<ProbabilityBand> DeathBands { get; set; } = new();
         public double AccidentAnnualProbability { get; set; } = 0.001;
         public double AccidentFatalityProbability { get; set; } = 0.30;
@@ -510,4 +509,4 @@ Doğum     : {birthsThisYear}{birthDetails}
     }
 }
 
-//Classlar çıplak -- interface yok, kodu modüler hale getir, parçala, ana canlı classı yap üzerinden hayvan da üreticez, reflection bak!, reflectionla var sorgusu çekmek, o tiptekileri buna cast et
+//Classlar çıplak -- interface yok, kodu modüler hale getir, parçala, ana canlı classı yap üzerinden hayvan da üreticez, reflection bak!, reflectionla var sorgusu çekmek, o tiptekileri buna cast et, object orianted hale getir, embedded, modelle dll lere ayır
