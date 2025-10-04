@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 
 namespace ConsoleApp1.Interfaces
 {
-    internal class IMortal
+    interface IMortal
     {
+        void Die();
+        double GetDeathProbability();
     }
 }
