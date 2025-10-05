@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace ConsoleApp1.Interfaces
 {
-    interface IReproducible
+    public interface IReproducible
     {
         bool CanReproduce();
         int MinReproductionAge { get; }

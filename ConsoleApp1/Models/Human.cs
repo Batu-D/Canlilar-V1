@@ -11,27 +11,12 @@ namespace ConsoleApp1.Models
 {
     public class Human : LivingBeing , IMortal, IReproducible
     {
-        private static SimulationConfig _config;
-        public static void SetConfig(SimulationConfig config)
-        {
-            _config = config;
-        }
-        /*public int MinReproductionAge =>
-            Gender == Gender.Male
-                ? _config.HumanMinReproductionAgeMale
-                : _config.HumanMinReproductionAgeFemale;
-        public double GetDeathProbability()
-        {
-            var band = _config.DeathBands
-                .FirstOrDefault(b => Age >= b.MinAge && Age <= b.MaxAge);
-            return band?.Probability ?? 0.001;
-        }*/ 
         public MaritalStatus MaritalStatus { get; set; }
         public int? SpouseId { get; set; }
         public int? MotherId { get; set; }
         public int? FatherId { get; set; }
-        
-        public Human(int id, string name, int age, Gender gender) : base(id, name, gender, age)
+
+        public Human(int id, string name, int age, Gender gender) : base(id, name, age, gender)
         {
             MaritalStatus = MaritalStatus.Single;
             SpouseId = null;
@@ -40,5 +25,22 @@ namespace ConsoleApp1.Models
         {
             IsAlive = false;
         }
+        public double GetDeathProbability()
+        {
+            if (Age < 40) return 0.001;
+            if (Age < 60) return 0.005;
+            if (Age < 75) return 0.02;
+            if (Age < 90) return 0.06;
+            return 0.12;
+        }
+        public bool CanReproduce()
+        {
+            return IsAlive 
+                && MaritalStatus == MaritalStatus.Married 
+                && Age >= MinReproductionAge
+                && Age <= MaxReproductionAge;
+        }
+        public int MinReproductionAge => Gender == Gender.Male ? 20 : 20;
+        public int MaxReproductionAge => Gender == Gender.Male ? 60 : 50;
     }
 }
