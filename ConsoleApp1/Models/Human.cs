@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace ConsoleApp1.Models
 {
-    public class Human : LivingBeing , IMortal, IReproducible
+    internal class Human : LivingBeing , IMortal, IReproducible
     {
         public MaritalStatus MaritalStatus { get; set; }
         public int? SpouseId { get; set; }

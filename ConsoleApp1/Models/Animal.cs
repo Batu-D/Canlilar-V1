@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace ConsoleApp1.Models
 {
-    public class Animal: LivingBeing, IMortal, IReproducible
+    internal class Animal: LivingBeing, IMortal, IReproducible
     {
         public string Species { get; set; }
         public int? MotherId { get; set; }

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace ConsoleApp1.Models
 {
-    public abstract class LivingBeing : ILivingBeing
+    internal abstract class LivingBeing : ILivingBeing
     {
         public int Id { get; set; } 
         public string Name { get; set; }
