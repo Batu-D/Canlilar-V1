@@ -19,7 +19,13 @@ namespace ConsoleApp1.Service
             _config = config;
             _random = random;
         }
-        //Yaşlılıktan ölmek
+        public double GetDeathProbability(int age)
+        {
+            var band = _config.DeathBands
+                .FirstOrDefault(b => age >= b.MinAge && age <= b.MaxAge);
+
+            return band?.Probability ?? 0.0;
+        }
         public List<ILivingBeing> ProcessNaturalDeaths(List<ILivingBeing> beings)
         {
             var deaths = new List<ILivingBeing>();
