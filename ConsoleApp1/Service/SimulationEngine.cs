@@ -70,7 +70,71 @@ namespace ConsoleApp1.Service
 
             return beings;
         }
+        public static void PrintSummary(List<ILivingBeing> beings)
+        {
+            int alive = beings.Count(b => b.IsAlive);
+            int aliveHumans = beings.OfType<Human>().Count(h => h.IsAlive);
+            int aliveAnimals = beings.OfType<Animal>().Count(a => a.IsAlive);
 
+            int married = beings.OfType<Human>().Count(h => h.IsAlive && h.MaritalStatus == ConsoleApp1.Enums.MaritalStatus.Married);
+            int widowed = beings.OfType<Human>().Count(h => h.IsAlive && h.MaritalStatus == ConsoleApp1.Enums.MaritalStatus.Widowed);
+            int single = aliveHumans - married - widowed;
+
+            Console.WriteLine($"Toplam Nüfus  : {alive}");
+            Console.WriteLine($"  İnsan       : {aliveHumans}");
+            Console.WriteLine($"  Hayvan      : {aliveAnimals}");
+            Console.WriteLine($"\nİnsan Durumu:");
+            Console.WriteLine($"  Evli        : {married}");
+            Console.WriteLine($"  Dul         : {widowed}");
+            Console.WriteLine($"  Bekar       : {single}");
+        }
+
+        public static void PrintYearResult(SimulationYearResult result, List<ILivingBeing> beings)
+        {
+            Console.WriteLine($"\n{'=',60}");
+            Console.WriteLine($"YIL: {result.Year}");
+            Console.WriteLine(new string('=', 60));
+
+            // Nüfus bilgileri
+            Console.WriteLine($"\n📊 NÜFUS İSTATİSTİKLERİ:");
+            Console.WriteLine($"Toplam Nüfus  : {result.TotalPopulation}");
+            Console.WriteLine($"  İnsan       : {result.AliveHumans}");
+            Console.WriteLine($"  Hayvan      : {result.AliveAnimals}");
+
+            // İnsan medeni durumu
+            var humans = beings.OfType<Human>().Where(h => h.IsAlive).ToList();
+            int married = humans.Count(h => h.MaritalStatus == ConsoleApp1.Enums.MaritalStatus.Married);
+            int widowed = humans.Count(h => h.MaritalStatus == ConsoleApp1.Enums.MaritalStatus.Widowed);
+            int single = result.AliveHumans - married - widowed;
+
+            Console.WriteLine($"\nİnsan Medeni Durumu:");
+            Console.WriteLine($"  Evli        : {married}");
+            Console.WriteLine($"  Dul         : {widowed}");
+            Console.WriteLine($"  Bekar       : {single}");
+
+            // Olaylar
+            Console.WriteLine($"\n🎭 YILLIK OLAYLAR:");
+            Console.WriteLine($"💒 Evlilik    : {result.Marriages}");
+            Console.WriteLine($"👶 Doğum      : {result.Births}");
+            Console.WriteLine($"💀 Ölüm       : {result.Deaths}");
+            Console.WriteLine($"🚗 Kaza       : {result.Accidents}");
+
+            // Olay günlüğü
+            if (result.EventLog.Count > 0)
+            {
+                Console.WriteLine($"\n📜 OLAY GÜNLÜĞÜ:");
+                foreach (var log in result.EventLog)
+                {
+                    Console.WriteLine($"  • {log}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"\n📜 Bu yıl kayda değer bir olay olmadı.");
+            }
+
+            Console.WriteLine($"\n[ENTER] Devam | [ESC] Çıkış");
+        }
         public SimulationYearResult AdvanceOneYear(List<ILivingBeing> beings, int currentYear)
         {
             var result = new SimulationYearResult { Year = currentYear };
@@ -105,13 +169,16 @@ namespace ConsoleApp1.Service
             // 4️⃣ KAZA
             var (accidentDeaths, accidentCount) = _deathService.ProcessAccidents(beings);
 
-            foreach (var dead in accidentDeaths)
+            foreach (var entry in accidentDeaths)
             {
+                var dead = entry.victim;
+                var accType = entry.accidentType;
                 string type = dead is Human ? "İnsan" : "Hayvan";
-                result.EventLog.Add($"{currentYear}: #{dead.Id} {dead.Name} ({type}) kazada öldü!");
+                result.EventLog.Add($"{currentYear}: #{dead.Id} {dead.Name} ({type}) {accType} sonucu öldü!");
             }
             result.Accidents = accidentCount;
             result.Deaths += accidentDeaths.Count;
+
 
             // 5️⃣ ÖLÜM (yaşlılık)
             var naturalDeaths = _deathService.ProcessNaturalDeaths(beings);
@@ -119,7 +186,7 @@ namespace ConsoleApp1.Service
             foreach (var dead in naturalDeaths)
             {
                 string type = dead is Human ? "İnsan" : "Hayvan";
-                result.EventLog.Add($"{currentYear}: #{dead.Id} {dead.Name} ({type}) yaşlılıktan öldü (yaş {dead.Age}).");
+                result.EventLog.Add($"{currentYear}: #{dead.Id} {dead.Name} ({type}) öldü (yaş {dead.Age}).");
             }
             result.Deaths += naturalDeaths.Count;
 

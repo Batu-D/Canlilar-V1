@@ -54,6 +54,7 @@ namespace SocietySim
         public double AccidentChance { get; set; } = 0.02;
         public double AccidentAnnualProbability { get; set; } = 0.01;
         public double AccidentFatalityProbability { get; set; } = 0.30;
+        public List<string> AccidentTypes { get; set; } = new();
     }
 
     // ========== HELPER CLASSES ==========
