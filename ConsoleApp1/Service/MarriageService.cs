@@ -27,12 +27,11 @@ namespace ConsoleApp1.Service
 
             return band?.Probability ?? 0.0;
         }
-        public List<(Human male, Human female)> ProcessMarriage(List<Humant> humans)
+        public List<(Human male, Human female)> ProcessMarriage(List<Human> humans)
         {
             var candidates = humans.Where(h => 
             h.IsAlive &&
-            h.MaritalStatus == MaritalStatus.Single && 
-            h.MaritalStatus == MaritalStatus.Widowed &&
+            h.MaritalStatus != MaritalStatus.Married && 
             h.Age >= _config.MarriageCandidateMinAge &&
             h.Age <= _config.MarriageCandidateMaxAge
             ).ToList();
