@@ -1,0 +1,84 @@
+{
+  "startYear": 2025,
+  "endYear": 2030,
+  "generatedAt": "2024-01-01T12:00:00Z",
+  "yearlyResults": [
+    {
+      "year": 2025,
+      "totalPopulation": 120,
+      "aliveHumans": 95,
+      "aliveAnimals": 25,
+      "marriages": 4,
+      "births": 6,
+      "deaths": 2,
+      "accidents": 1,
+      "eventLog": [
+        "2025: #12 Ayşe ve #43 Mehmet evlendi!",
+        "2025: #144 Boncuk (Hayvan) doğdu!"
+      ]
+    },
+    {
+      "year": 2026,
+      "totalPopulation": 128,
+      "aliveHumans": 100,
+      "aliveAnimals": 28,
+      "marriages": 5,
+      "births": 9,
+      "deaths": 3,
+      "accidents": 2,
+      "eventLog": [
+        "2026: #89 Cemre (İnsan) doğdu!",
+        "2026: #33 Arda (İnsan) yaşlılıktan öldü."
+      ]
+    },
+    {
+      "year": 2027,
+      "totalPopulation": 134,
+      "aliveHumans": 103,
+      "aliveAnimals": 31,
+      "marriages": 3,
+      "births": 8,
+      "deaths": 2,
+      "accidents": 0,
+      "eventLog": []
+    },
+    {
+      "year": 2028,
+      "totalPopulation": 129,
+      "aliveHumans": 98,
+      "aliveAnimals": 31,
+      "marriages": 2,
+      "births": 5,
+      "deaths": 7,
+      "accidents": 3,
+      "eventLog": [
+        "2028: #78 Kaan trafik kazasında öldü.",
+        "2028: #155 Minnoş (Hayvan) doğdu!"
+      ]
+    },
+    {
+      "year": 2029,
+      "totalPopulation": 133,
+      "aliveHumans": 100,
+      "aliveAnimals": 33,
+      "marriages": 6,
+      "births": 10,
+      "deaths": 6,
+      "accidents": 1,
+      "eventLog": []
+    },
+    {
+      "year": 2030,
+      "totalPopulation": 137,
+      "aliveHumans": 102,
+      "aliveAnimals": 35,
+      "marriages": 4,
+      "births": 7,
+      "deaths": 3,
+      "accidents": 2,
+      "eventLog": [
+        "2030: #201 Ada ve #88 Bora evlendi!"
+      ]
+    }
+  ]
+}
