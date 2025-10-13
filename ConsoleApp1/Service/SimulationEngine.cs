@@ -70,6 +70,20 @@ namespace ConsoleApp1.Service
 
             return beings;
         }
+
+        public SimulationYearResult CreateSnapshot(List<ILivingBeing> beings, int year)
+        {
+            var aliveHumans = beings.OfType<Human>().Count(h => h.IsAlive);
+            var aliveAnimals = beings.OfType<Animal>().Count(a => a.IsAlive);
+
+            return new SimulationYearResult
+            {
+                Year = year,
+                TotalPopulation = aliveHumans + aliveAnimals,
+                AliveHumans = aliveHumans,
+                AliveAnimals = aliveAnimals
+            };
+        }
         public static void PrintSummary(List<ILivingBeing> beings)
         {
             int alive = beings.Count(b => b.IsAlive);
