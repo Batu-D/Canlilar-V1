@@ -5,9 +5,6 @@ using SocietySim;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace ConsoleApp1.Service
 {
@@ -15,34 +12,35 @@ namespace ConsoleApp1.Service
     {
         private SimulationConfig _config;
         private Random _random;
-        private int _nextId;
 
-        public BirthService(SimulationConfig config, Random random, int startId)
+        public BirthService(SimulationConfig config, Random random)
         {
             _config = config;
             _random = random;
-            _nextId = startId;
         }
-        public List<ILivingBeing>ProcessBirths(List<ILivingBeing> beings)
+
+        // ✅ ref int nextId parametresi eklendi
+        public List<ILivingBeing> ProcessBirths(List<ILivingBeing> beings, ref int nextId)
         {
             var newborns = new List<ILivingBeing>();
 
             //İnsan Bebekleri
             var humans = beings.OfType<Human>().ToList();
-            newborns.AddRange(ProcessHumanBirths(humans));
+            newborns.AddRange(ProcessHumanBirths(humans, ref nextId));
 
             //Animal Bebekleri
             var animals = beings.OfType<Animal>().ToList();
-            newborns.AddRange(ProcessAnimalBirths(animals));
+            newborns.AddRange(ProcessAnimalBirths(animals, ref nextId));
 
             return newborns;
         }
-        public List<Human> ProcessHumanBirths(List<Human> humans)
+
+        public List<Human> ProcessHumanBirths(List<Human> humans, ref int nextId)
         {
             var babies = new List<Human>();
 
             //Koşulları sağlayan anneleri bul
-            var eligibleMothers = humans.Where(x => x.IsAlive 
+            var eligibleMothers = humans.Where(x => x.IsAlive
             && x.MaritalStatus == MaritalStatus.Married
             && x.Gender == Gender.Female
             && x.CanReproduce()
@@ -56,64 +54,23 @@ namespace ConsoleApp1.Service
                 var father = humans.FirstOrDefault(h => h.Id == mother.SpouseId.Value);
                 if (father == null || !father.IsAlive || !father.CanReproduce()) continue;
 
-
                 //Doğum Şansı Kontrolü
-                if (_random.NextDouble() < _config.BirthAnnualProbability)
+                if (_random.NextDouble() < _config.BirthChance)
                 {
                     //Kaç bebek doğacak?
                     int babyCount = DetermineBabyCount();
 
                     for (int i = 0; i < babyCount; i++)
                     {
-                        var baby = CreateHumanBaby(mother.Id, father.Id);
+                        var baby = CreateHumanBaby(mother.Id, father.Id, ref nextId);
                         babies.Add(baby);
                     }
                 }
             }
             return babies;
         }
-        private int DetermineBabyCount()
-        {
-            double rand = _random.NextDouble();
 
-            if (rand < _config.TripletProbability)
-                return 3;
-            else if (rand < _config.TwinProbability)
-                return 2;
-            else
-                return 1;
-        }
-        private (Gender gender, string name) GenerateGenderAndName()
-        {
-            var gender = _random.NextDouble() < 0.5 ? Gender.Male : Gender.Female;
-            var nameList = gender == Gender.Male ? _config.MaleNames : _config.FemaleNames;
-            var name = nameList[_random.Next(nameList.Count)];
-            return (gender, name);
-        }
-        private Human CreateHumanBaby(int motherId, int fatherId)
-        {
-            var (gender, name) = GenerateGenderAndName();
-
-            var baby = new Human(_nextId++, name, 0, gender)
-            {
-                MotherId = motherId,
-                FatherId = fatherId,
-                MaritalStatus = MaritalStatus.Single
-            };
-            return baby;
-        }
-        private Animal CreateAnimalBaby(int motherId, int fatherId, string species)
-        {
-            var (gender, name) = GenerateGenderAndName();
-
-            var baby = new Animal(_nextId++, name, 0, gender, species)
-            {
-                MotherId = motherId,
-                FatherId = fatherId,
-            };
-            return baby;
-        }
-        public List<Animal> ProcessAnimalBirths(List<Animal> animals)
+        public List<Animal> ProcessAnimalBirths(List<Animal> animals, ref int nextId)
         {
             var babies = new List<Animal>();
 
@@ -138,13 +95,13 @@ namespace ConsoleApp1.Service
                 if (male == null) continue;
 
                 //Doğum şansı kontrolü
-                if (_random.NextDouble() < _config.BirthAnnualProbability)
+                if (_random.NextDouble() < _config.AnimalBreedChance)
                 {
                     int babyCount = DetermineBabyCount();
 
                     for (int i = 0; i < babyCount; i++)
                     {
-                        var baby = CreateAnimalBaby(female.Id, male.Id, female.Species);
+                        var baby = CreateAnimalBaby(female.Id, male.Id, female.Species, ref nextId);
                         babies.Add(baby);
                     }
                 }
@@ -152,51 +109,87 @@ namespace ConsoleApp1.Service
             return babies;
         }
 
-        //Reflection ile generic bebek oluşturma
-        /*private T CreateNewBorn<T>(int motherId, int fatherId) where T : ILivingBeing
+        private int DetermineBabyCount()
         {
-            Type tpye = typeof(T);
+            double rand = _random.NextDouble();
 
-            //Random cinsiyet
+            // Varsayılan değerler (eğer config'de yoksa)
+            double tripletProb = 0.05;
+            double twinProb = 0.20;
+
+            // Config'den al (eğer varsa)
+            var configType = _config.GetType();
+            var tripletProp = configType.GetProperty("TripletProbability");
+            var twinProp = configType.GetProperty("TwinProbability");
+
+            if (tripletProp != null)
+                tripletProb = (double)(tripletProp.GetValue(_config) ?? 0.05);
+            if (twinProp != null)
+                twinProb = (double)(twinProp.GetValue(_config) ?? 0.20);
+
+            if (rand < tripletProb)
+                return 3;
+            else if (rand < twinProb)
+                return 2;
+            else
+                return 1;
+        }
+
+        private (Gender gender, string name) GenerateGenderAndName<T>(string? species = null)
+            where T : ILivingBeing
+        {
             var gender = _random.NextDouble() < 0.5 ? Gender.Male : Gender.Female;
+            List<string> nameList;
 
-            //Random isim
-            var nameList = gender == Gender.Male ? _config.MaleNames : _config.FemaleNames;
-            var name = nameList[_random.Next(nameList.Count)];
-
-            //Constructor parametreleri
-            object[] parameters;
-
-            if(type == typeof(Human))
+            if (typeof(T) == typeof(Human))
             {
-                parameters = new object[] { _nextId++, name, 0, gender};
+                // İnsan: cinsiyete göre listeden seç
+                nameList = (gender == Gender.Male) ? _config.MaleNames : _config.FemaleNames;
             }
-            else if (type == typeof(Animal))
+            else if (typeof(T) == typeof(Animal))
             {
-                //Animal için gerektli species bilgisini almak için
-                //CreateAnimalBaby ayrı metod olarak kaldı
-                parameters = new object[] { _nextId++, name, 0, gender, "Unknown" };
+                // Hayvan: tür bazlı varsa onu, yoksa genel hayvan isimleri
+                nameList =
+                    (_config.AnimalNamesBySpecies != null && species != null &&
+                     _config.AnimalNamesBySpecies.TryGetValue(species, out var bySpecies) && bySpecies?.Count > 0)
+                        ? bySpecies!
+                        : _config.AnimalNames;
             }
             else
             {
-                throw new NotSupportedException($"Tip {typoe.Name} desteklenmiyor");
+                throw new NotSupportedException($"İsim üretimi {typeof(T).Name} için tanımlı değil.");
             }
 
-            var constructor = type.GetConstructor
-                (new[] { typeof(int), typeof(string), typeof(int), typeof(Gender) });
-            if (constructor == null)
-                throw new InvalidOperationException($"{type.Name} için uygun contrustor bulunmadı ");
+            if (nameList == null || nameList.Count == 0)
+                throw new InvalidOperationException($"{typeof(T).Name} için isim listesi boş!");
 
-            var instance = (T)constructor.Invoke(parameters);
+            var name = nameList[_random.Next(nameList.Count)];
+            return (gender, name);
+        }
 
-            //MotherId ve FatherId ata (reflection ile)
-            var motherIdProp = type.GetProperty("MotherId");
-            var fatherIdProp = type.GetProperty("FatherId");
+        private Human CreateHumanBaby(int motherId, int fatherId, ref int nextId)
+        {
+            var (gender, name) = GenerateGenderAndName<Human>();
 
-            motherIdProp?.SetValue(instance, motherId);
-            fatherIdProp?.SetValue(instance, fatherId);
+            var baby = new Human(nextId++, name, 0, gender)
+            {
+                MotherId = motherId,
+                FatherId = fatherId,
+                MaritalStatus = MaritalStatus.Single
+            };
+            return baby;
+        }
 
-            return instance;
-        }*/
+        private Animal CreateAnimalBaby(int motherId, int fatherId, string species, ref int nextId)
+        {
+            var (gender, name) = GenerateGenderAndName<Animal>(species);
+
+            var baby = new Animal(nextId++, name, 0, gender, species)
+            {
+                MotherId = motherId,
+                FatherId = fatherId,
+            };
+            return baby;
+        }
     }
 }

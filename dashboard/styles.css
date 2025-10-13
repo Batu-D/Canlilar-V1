@@ -1,0 +1,125 @@
+:root {
+    color-scheme: light dark;
+    --bg: #0f172a;
+    --card: rgba(15, 23, 42, 0.6);
+    --text: #e2e8f0;
+    --accent: #38bdf8;
+    --shadow: 0 10px 30px rgba(15, 23, 42, 0.3);
+    font-family: "Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    margin: 0;
+    background: radial-gradient(circle at top, rgba(56, 189, 248, 0.25), transparent 55%),
+        radial-gradient(circle at bottom, rgba(14, 116, 144, 0.15), transparent 45%),
+        var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+}
+
+header,
+footer {
+    text-align: center;
+    padding: 2rem 1rem;
+    backdrop-filter: blur(10px);
+}
+
+header h1 {
+    margin-bottom: 0.5rem;
+    font-size: clamp(1.8rem, 2.5vw, 2.4rem);
+}
+
+main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem 3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.panel {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.panel h2,
+.panel h3 {
+    margin-top: 0;
+    color: var(--accent);
+}
+
+.panel p {
+    line-height: 1.6;
+}
+
+label,
+select {
+    display: block;
+    margin-top: 0.75rem;
+}
+
+select {
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    background: rgba(15, 23, 42, 0.7);
+    color: var(--text);
+}
+
+.charts {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.chart-card {
+    background: rgba(15, 23, 42, 0.7);
+    border-radius: 14px;
+    padding: 1rem;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.event-log {
+    display: grid;
+    gap: 0.75rem;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.event-log article {
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    border-left: 3px solid var(--accent);
+}
+
+.event-log h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+}
+
+.event-log ul {
+    margin: 0;
+    padding-left: 1.25rem;
+    color: rgba(226, 232, 240, 0.85);
+}
+
+.event-log li {
+    margin-bottom: 0.25rem;
+}
+
+footer {
+    color: rgba(226, 232, 240, 0.6);
+    font-size: 0.9rem;
+}
+
+@media (max-width: 600px) {
+    .panel {
+        padding: 1.25rem;
+    }
+}

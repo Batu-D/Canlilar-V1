@@ -48,31 +48,44 @@ namespace ConsoleApp1.Service
             }
             return deaths;
         }
-        public (List<ILivingBeing> deaths, int accidents) ProcessAccidents(List<ILivingBeing> beings)
+        public (List<(ILivingBeing victim, string accidentType)> deaths, int accidents)
+    ProcessAccidents(List<ILivingBeing> beings)
         {
-            var deaths = new List<ILivingBeing>();
+            var deaths = new List<(ILivingBeing victim, string accidentType)>();
             int accidentCount = 0;
 
-            foreach( var being in beings)
+            foreach (var being in beings)
             {
                 if (!being.IsAlive) continue;
 
-                //Kaza geçirdi mi?
-                if(_random.NextDouble() < _config.AccidentAnnualProbability)
+                // Kaza geçirdi mi?
+                if (_random.NextDouble() < _config.AccidentAnnualProbability)
                 {
                     accidentCount++;
 
-                    //Ölümcül mü?
-                    if(_random.NextDouble() < _config.AccidentFatalityProbability)
+                    // Kaza türünü seç
+                    string accType = PickAccidentType();
+
+                    // Ölümcül mü?
+                    if (_random.NextDouble() < _config.AccidentFatalityProbability)
                     {
                         KillBeing(being, beings);
-                        deaths.Add(being);
+                        deaths.Add((being, accType));
                     }
-                    //Değilse sadece kaza geçirdi, yaşıyor
+                    // değilse: sadece kaza, yaşıyor (istersen burada da log tutabilirsin)
                 }
             }
+
             return (deaths, accidentCount);
         }
+
+        private string PickAccidentType()
+        {
+            var list = _config.AccidentTypes;
+            if (list == null || list.Count == 0) return "kaza";
+            return list[_random.Next(list.Count)];
+        }
+
         public void KillBeing(ILivingBeing being, List<ILivingBeing> allBeings)
         {
             //1.Canlıyı öldür
