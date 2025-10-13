@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Toplum Simülasyonu Kontrol Paneli</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js" defer></script>
+    <script src="app.js" defer></script>
+</head>
+<body>
+    <header>
+        <h1>Toplum Simülasyonu Kontrol Paneli</h1>
+        <p>Simülasyonu canlı olarak izleyin, SignalR üzerinden gerçek zamanlı sonuçları takip edin.</p>
+    </header>
+
+    <main>
+        <section class="panel control-panel">
+            <h2>Canlı Kontrol</h2>
+            <p>Önce .NET SignalR sunucusunu başlatın, ardından butonları kullanarak simülasyonu yönetin.</p>
+
+            <div class="status-row">
+                <span id="connection-status" class="status-badge offline">Bağlantı bekleniyor…</span>
+                <span id="run-status" class="status-badge idle">Duraklatıldı</span>
+            </div>
+
+            <div class="control-buttons">
+                <button id="start-btn" class="primary" disabled>Başlat</button>
+                <button id="pause-btn" disabled>Duraklat</button>
+                <button id="step-btn" disabled>Tek Adım</button>
+                <button id="reset-btn" disabled>Sıfırla</button>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span>Başlangıç Yılı</span>
+                    <strong id="start-year">-</strong>
+                </div>
+                <div class="stat-card">
+                    <span>Mevcut Yıl</span>
+                    <strong id="current-year">-</strong>
+                </div>
+                <div class="stat-card">
+                    <span>Toplam Nüfus</span>
+                    <strong id="total-population">-</strong>
+                </div>
+                <div class="stat-card">
+                    <span>Canlı İnsan</span>
+                    <strong id="alive-humans">-</strong>
+                </div>
+                <div class="stat-card">
+                    <span>Canlı Hayvan</span>
+                    <strong id="alive-animals">-</strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel charts">
+            <div class="chart-card">
+                <h3>Toplam Nüfus Trendleri</h3>
+                <canvas id="populationChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>İnsan / Hayvan Dağılımı</h3>
+                <canvas id="compositionChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Yıllık Olay Sayıları</h3>
+                <canvas id="eventsChart"></canvas>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>Olay Günlüğü</h2>
+            <p>Her yıl gerçekleşen önemli olayların özetini inceleyin.</p>
+            <div id="event-log" class="event-log"></div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Dashboard, simülasyon motoruna SignalR üzerinden bağlanarak sonuçları gerçek zamanlı gösterir.</p>
+    </footer>
+</body>
+</html>

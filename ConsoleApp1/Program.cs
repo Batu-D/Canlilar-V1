@@ -1,26 +1,37 @@
-﻿using ConsoleApp1.Service;
+using ConsoleApp1.Models;
+using ConsoleApp1.Service;
 using SocietySim;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
-using System.Text.Json;
 
 namespace ConsoleApp1
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
+        {
+            if (args.Contains("--server", StringComparer.OrdinalIgnoreCase))
+            {
+                await SimulationDashboardServer.RunAsync(args);
+                return;
+            }
+
+            RunConsoleMode();
+        }
+
+        private static void RunConsoleMode()
         {
             Console.OutputEncoding = Encoding.UTF8;
             Console.InputEncoding = Encoding.UTF8;
 
             Console.WriteLine("=== TOPLUM SİMÜLASYONU ===\n");
 
-            // 1. Config yükle
-            var config = LoadConfig("appsettings.json");
-
-            // 2. Simulation Engine oluştur
+            var config = SimulationConfigLoader.Load("appsettings.json");
             var engine = new SimulationEngine(config);
 
-            // 3. Başlangıç nüfusu oluştur
+            var yearlyHistory = new List<SimulationYearResult>();
+
             Console.Write("Kaç insan ile başlamak istersiniz? (varsayılan: 100): ");
             string humanInput = Console.ReadLine();
             int humanCount = string.IsNullOrWhiteSpace(humanInput) ? 100 : int.Parse(humanInput);
@@ -34,13 +45,14 @@ namespace ConsoleApp1
             int startYear = 2025;
             int currentYear = startYear;
 
-            // Başlangıç durumunu göster
             Console.WriteLine($"\n--- Başlangıç Yılı: {startYear} ---");
             SimulationEngine.PrintSummary(beings);
 
+            var initialSnapshot = engine.CreateSnapshot(beings, startYear);
+            yearlyHistory.Add(initialSnapshot);
+
             Console.WriteLine("\n[ENTER] Bir yıl ilerlet | [ESC] Çıkış");
 
-            // 4. Ana döngü
             while (true)
             {
                 var key = Console.ReadKey(true);
@@ -55,13 +67,12 @@ namespace ConsoleApp1
                 {
                     currentYear++;
 
-                    // Yıl ilerlet
                     var result = engine.AdvanceOneYear(beings, currentYear);
 
-                    // Sonuçları göster
+                    yearlyHistory.Add(result);
+
                     SimulationEngine.PrintYearResult(result, beings);
 
-                    // Nüfus bitti mi?
                     if (result.TotalPopulation == 0)
                     {
                         Console.WriteLine("\n💀 TÜM NÜFUS YIKILDI! Simülasyon sona erdi.");
@@ -71,35 +82,46 @@ namespace ConsoleApp1
             }
 
             Console.WriteLine("\nSimülasyon toplam süre: " + (currentYear - startYear) + " yıl");
+
+            PersistHistory(startYear, currentYear, yearlyHistory);
         }
 
-        static SimulationConfig LoadConfig(string fileName)
+        static void PersistHistory(int startYear, int endYear, List<SimulationYearResult> results)
         {
-            // Çalışma dizinine göre mutlak yol oluştur
-            var path = Path.IsPathRooted(fileName)
-                ? fileName
-                : Path.Combine(AppContext.BaseDirectory, fileName);
-
-            // Dosya yoksa .NET doğal hatayı fırlatsın istiyorsan bu kontrolü kaldırabilirsin.
-            if (!File.Exists(path))
-                throw new FileNotFoundException("Config dosyası bulunamadı.", path);
-
-            var json = File.ReadAllText(path);
-
-            var options = new JsonSerializerOptions
+            try
             {
-                PropertyNameCaseInsensitive = true,
-                ReadCommentHandling = JsonCommentHandling.Skip,
-                AllowTrailingCommas = true
-            };
+                if (results.Count == 0)
+                {
+                    return;
+                }
 
-            var config = JsonSerializer.Deserialize<SimulationConfig>(json, options)
-                         ?? throw new InvalidOperationException("Config deserialize edilemedi (null döndü).");
+                var export = new SimulationRunExport
+                {
+                    StartYear = startYear,
+                    EndYear = endYear,
+                    GeneratedAt = DateTime.UtcNow,
+                    YearlyResults = results
+                };
 
-            Console.WriteLine("Config dosyası yüklendi.\n");
-            return config;
+                var options = new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                };
+
+                var outputDir = Path.Combine(AppContext.BaseDirectory, "output");
+                Directory.CreateDirectory(outputDir);
+
+                var filePath = Path.Combine(outputDir, "simulation-history.json");
+                File.WriteAllText(filePath, JsonSerializer.Serialize(export, options));
+
+                Console.WriteLine($"\n📁 Simülasyon geçmişi '{filePath}' dosyasına kaydedildi.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"\n⚠️ Simülasyon geçmişi kaydedilirken hata oluştu: {ex.Message}");
+            }
         }
 
-        
+
     }
 }
